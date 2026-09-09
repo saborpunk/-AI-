@@ -4,8 +4,24 @@ ai:
   connect-timeout: 2s
   read-timeout: 3s
 spring:
+  config:
+    import: optional:file:./config/db.local.properties,optional:file:../config/db.local.properties
   application:
     name: seed-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/seed_assistant?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&connectTimeout=2000&socketTimeout=3000
+    username: ${DB_USERNAME:seed_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 0
+      connection-timeout: 3000
+      initialization-fail-timeout: -1
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true
+    default-statement-timeout: 3
 server:
   # 骨架只供本机验证；业务鉴权尚未实现。
   address: 127.0.0.1

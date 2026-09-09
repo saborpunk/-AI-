@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-已实现 MVP v0.1 第二阶段的单条调用链：Java 接收发芽率咨询、校验参数，调用 Python Mock 生成待核实草稿，再校验并返回 JSON。尚未实现持久化、真实 AI、登录或前端；这不是完整 MVP。
+第三阶段咨询持久化已通过验收：真实 MySQL 保存问题和 Python 草稿、人工修改确认、历史查询、并发冲突及 Java 重启读回均通过。Java 13项、Python 9项自动测试通过，原 Java↔Python Mock 接口回归正常。尚未实现真实 AI、登录或前端；本次只交付已确认的第三阶段范围。
 
 - [项目整体计划书](项目整体计划书.md)：业务痛点、技术说明及长期建设路线。
 - [项目长期协作说明](AGENTS.md)：版本提交规则和面向初学者的解释要求。
@@ -15,6 +15,8 @@
 目标流程：录入文字咨询 → 根据模拟资料生成草稿 → 商家编辑确认 → 查看历史。本阶段无需真实资料、模型密钥或 Docker。
 
 ## Windows 启动步骤
+
+第三阶段增加了 MySQL 连接配置，先看下面“第三阶段数据库准备”。Java 即使数据库暂不可用也能启动，原无数据库预览仍可用，但健康检查会反映数据库异常；不能以服务启动代替持久化验收。
 
 准备 JDK 21、Python 3.12（含 pip）和 Git。Maven Wrapper 已包含在仓库中，第一次使用会下载 Maven 3.9.16，无需单独安装 Maven。以下命令在项目根目录的 PowerShell 执行。
 
@@ -113,11 +115,50 @@ question 必填，不能全空白，最多 2000 个字符。batchCode 可不传�
 
 ## 网络和常见问题
 
+- 如果 Maven Central 返回403，本阶段已验证可使用项目镜像配置：在 Maven 命令增加 `-s config/maven-mirror.xml`。不需要修改系统 Maven 配置；依赖缓存仍在项目 .m2 下。
+
 - Maven 首次失败若是 TLS/代理错误，先确认自己的代理实际可用。需要通过代理下载时，可在构建命令增加 `'-Dhttps.proxyHost=127.0.0.1' '-Dhttps.proxyPort=7897'`；7897 是本机实测端口，其他电脑需换成自己的端口。不要关闭证书验证。
 - pip 如被系统代理干扰，可在该终端临时设置 `$env:NO_PROXY='*'`，使用 `python.exe -m pip install -r ai-service/requirements.txt --index-url https://pypi.tuna.tsinghua.edu.cn/simple` 从清华镜像下载。此处 python.exe 指上面的虚拟环境完整路径。关闭终端后临时设置结束。
 - PowerShell 中 Maven 的 `-D` 参数整体加引号，避免带点号的版本号被拆分。
 - 端口被占用时，不要随意结束其他项目进程。Java 可在启动前设置 `$env:SERVER_PORT='8081'`，Python 可改 `--port 8001`，检查脚本对应使用 `-JavaBaseUrl http://127.0.0.1:8081 -AiBaseUrl http://127.0.0.1:8001`。
-- 服务只监听本机。数据库、鉴权和部署方案在后续阶段加入。
+- 服务只监听本机。数据库已在第三阶段加入；鉴权和部署方案尚未实现。
+
+## 第三阶段数据库准备与验收
+
+仅使用已有 MySQL 的 `localhost:3306`。请保持现有服务和安装/数据目录不变；本项目脚本不启动、停止、移动或初始化 MySQL 物理文件。
+
+1. 将 `config/db.example.properties` 复制为 `config/db.local.properties`（已有时不要覆盖），填入可创建/访问 `seed_assistant` 项目库的现有账号。该本地文件被 Git 忽略，不上传。Properties 中反斜线需要写为双反斜线。
+2. 在项目根目录先构建，下载 MyBatis 和 JDBC 驱动。然后检查连接、执行可审阅的 SQL。
+
+```powershell
+. .\scripts\use-local-tools.ps1 -JdkHome 'D:\dev\sdk'
+.\backend-java\mvnw.cmd -B -ntp -s config/maven-mirror.xml '-Dmaven.repo.local=.m2/repository' -f backend-java/pom.xml verify
+
+$mysqlDriver = Get-ChildItem .m2\repository\com\mysql\mysql-connector-j -Recurse -Filter '*.jar' | Select-Object -First 1
+java -cp $mysqlDriver.FullName scripts/DatabaseSetup.java check
+# 仅在 check 成功后执行；SQL原文在 scripts/sql/001_create_consultation.sql。
+java -cp $mysqlDriver.FullName scripts/DatabaseSetup.java initialize
+```
+
+建表脚本只创建项目库表，不删除记录、不修改已有账号。需要已有账号具备对应权限；权限不足时由数据库所有者执行 SQL。不在初始化脚本中保存密码。实际 SQL 操作由 MySQL 自己管理存储文件，脚本不直接操作这些文件。
+
+3. 启动 Java 和 Python（命令同前），执行真实 API 验收：
+
+```powershell
+.\ai-service\.venv\Scripts\python.exe scripts/check-persistence.py flow
+# 停止并重新启动 Java 后验证记录仍存在；无需重启MySQL。
+.\ai-service\.venv\Scripts\python.exe scripts/check-persistence.py readback
+```
+
+验收脚本创建明确标识的合成记录，保留这些记录以供应用重启后检查，不删除其他记录。最新验收快照保存在被忽略的 `.tools/persistence-check.json`。
+
+接口：创建 `POST /api/v1/consultations`；详情 `GET /api/v1/consultations/{id}`；历史 `GET /api/v1/consultations?page=1&size=20`；生成 `POST /api/v1/consultations/{id}/draft`，请求 `{"version":0}`；人工修改/确认 `PATCH /api/v1/consultations/{id}/review`，请求 `{"version":1,"finalAnswer":"人工核对的回复","action":"SAVE"}` 或 `action=CONFIRM`。
+
+确认记录只读，更新需携带最新 version，冲突409、不存在404、非法输入400。连接异常503/DATABASE_UNAVAILABLE，其他数据库操作错误500/DATABASE_ERROR；SQL提交响应中断时可能无法确定结果，应按已知咨询编号查询，不能直接认为没写入。新增接口直接返回记录，requestId 仍在响应头；旧预览接口结构保持不变。
+
+只在 MySQL 确实不可连接时，可用 `check-persistence.py database-unavailable` 验证错误响应；不要为了测试去停止现有 MySQL。自动测试已用模拟 DataSource 覆盖这个分支。Python 停止时可运行 `check-persistence.py python-unavailable`，验证原咨询保留且允许人工确认；该脚本不自行停止任何服务。
+
+详细模型、文件职责和学习点见 [第三阶段说明](docs/第三阶段说明.md)。
 
 ## 目录与依赖
 

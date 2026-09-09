@@ -33,3 +33,4 @@ Thumbs.db
 .tools/
 .m2/
 .uv-cache/
+config/db.local.properties

@@ -1,6 +1,11 @@
 package com.seedassistant.common;
 
 import jakarta.servlet.http.HttpServletRequest;
+import com.seedassistant.consultation.ConsultationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.CannotCreateTransactionException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import java.net.http.HttpTimeoutException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +18,32 @@ import org.springframework.web.client.RestClientException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
     public record Error(String code, String message, String requestId) { }
+
+    @ExceptionHandler(ConsultationException.class)
+    ResponseEntity<Error> consultation(ConsultationException error, HttpServletRequest request) {
+        return response(error.status(), error.code(), error.getMessage(), request);
+    }
+
+    @ExceptionHandler({DataAccessException.class, CannotCreateTransactionException.class})
+    ResponseEntity<Error> database(Exception error, HttpServletRequest request) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof CannotCreateTransactionException
+                    || cause instanceof org.springframework.dao.DataAccessResourceFailureException
+                    || cause instanceof java.sql.SQLTransientConnectionException
+                    || cause instanceof java.sql.SQLTimeoutException
+                    || (cause instanceof java.sql.SQLException sql && sql.getSQLState() != null
+                        && (sql.getSQLState().startsWith("08") || sql.getSQLState().equals("28000")))) {
+                return response(503, "DATABASE_UNAVAILABLE", "数据库暂不可用，操作未确认成功，请稍后查询记录状态", request);
+            }
+        }
+        // 建表遗漏或 SQL 错误不冒充连接中断，也不向调用方暴露 SQL 内容。
+        return response(500, "DATABASE_ERROR", "数据库操作失败，请检查项目表结构与服务日志", request);
+    }
+
+    @ExceptionHandler({HandlerMethodValidationException.class, MethodArgumentTypeMismatchException.class})
+    ResponseEntity<Error> invalidParameters(HttpServletRequest request) {
+        return response(400, "INVALID_REQUEST", "路径或分页参数无效", request);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Error> invalid(MethodArgumentNotValidException error, HttpServletRequest request) {
