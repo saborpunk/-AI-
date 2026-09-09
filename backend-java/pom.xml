@@ -16,6 +16,11 @@
         <java.version>21</java.version>
     </properties>
     <dependencies>
+        <!-- 表单检查员：在调用 Python 之前拒绝空问题及非法批次号。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
         <!-- Web MVC 接收 HTTP 请求；自带嵌入式服务器，不需另装 Tomcat。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

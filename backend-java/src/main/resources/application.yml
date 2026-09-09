@@ -1,4 +1,8 @@
 debug: false
+ai:
+  base-url: ${AI_BASE_URL:http://127.0.0.1:8000}
+  connect-timeout: 2s
+  read-timeout: 3s
 spring:
   application:
     name: seed-service

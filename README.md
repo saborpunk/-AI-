@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-已搭建 MVP v0.1 的第一阶段骨架：Java 和 Python 服务独立启动，提供健康接口、自动测试及冒烟脚本。尚未实现咨询、数据库、AI 生成、登录或前端；这不是完整 MVP。
+已实现 MVP v0.1 第二阶段的单条调用链：Java 接收发芽率咨询、校验参数，调用 Python Mock 生成待核实草稿，再校验并返回 JSON。尚未实现持久化、真实 AI、登录或前端；这不是完整 MVP。
 
 - [项目整体计划书](项目整体计划书.md)：业务痛点、技术说明及长期建设路线。
 - [项目长期协作说明](AGENTS.md)：版本提交规则和面向初学者的解释要求。
@@ -66,7 +66,50 @@ cd ai-service
 .\scripts\smoke.ps1
 ```
 
-预期输出 `PASS: Java health, Python mock health, Python OpenAPI`。健康检查只证明服务可响应，两个后端目前没有业务调用。
+预期输出 `PASS: Java health, Python mock health, Python OpenAPI`。这只检查健康状态；继续执行下面的业务冒烟，才能验证跨服务调用。
+
+## 第二阶段：发芽率草稿预览
+
+代码更新后先按上面步骤重新构建 Java、重启两个服务。此功能没有数据库，不需要 MySQL。
+
+```powershell
+# 在项目根目录运行：真实请求只发往 Java，由 Java 调用 Python。
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-draft.ps1
+
+$body = @{ question = '这个种子发芽率多高？'; batchCode = 'DEMO-001' } | ConvertTo-Json
+Invoke-RestMethod 'http://127.0.0.1:8080/api/v1/germination-drafts' `
+  -Method Post -ContentType 'application/json; charset=utf-8' `
+  -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 5
+```
+
+响应示例（requestId 每次不同）：
+
+```json
+{
+  "requestId": "服务端生成的UUID",
+  "data": {
+    "requestId": "与外层相同的UUID",
+    "answerDraft": "【模拟草稿】已收到批次号 DEMO-001，还需要商家提供并核对该批次的检测或试种记录。当前无法确认发芽率，请勿将宣传话术当作批次检测结论。",
+    "missingFields": ["batchEvidence"],
+    "needsHumanReview": true,
+    "mode": "mock"
+  }
+}
+```
+
+question 必填，不能全空白，最多 2000 个字符。batchCode 可不传或为 null；传入时为 1–40 位大写字母、数字或短横线。不传批次时，missingFields 同时返回 batchCode、batchEvidence。有批次号不等于有检测依据，此阶段不会返回发芽率数字，也不会将任意问题自动分类。
+
+| 情况 | HTTP 状态 | code |
+| --- | --- | --- |
+| 正常 Mock 草稿 | 200 | 成功响应使用 data |
+| 参数或 JSON 无效 | 400 | INVALID_REQUEST |
+| Python 连接失败 | 503 | AI_UNAVAILABLE |
+| Python 响应超时 | 504 | AI_TIMEOUT |
+| Python 非成功状态或内容不符合约定 | 502 | AI_BAD_RESPONSE |
+
+错误 JSON 包含 code、message、requestId，响应头 X-Request-Id 与编号一致。默认连接超时 2 秒、读取超时 3 秒，不配置自动重试。Python 地址由启动 Java 前设置的 AI_BASE_URL 覆盖，默认 http://127.0.0.1:8000；不能通过请求体指定任意上游地址。
+
+详细文件职责、调用流程与取舍见 [第二阶段说明](docs/第二阶段说明.md)。
 
 ## 网络和常见问题
 
