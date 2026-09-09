@@ -1,0 +1,16 @@
+debug: false
+spring:
+  application:
+    name: seed-service
+server:
+  # 骨架只供本机验证；业务鉴权尚未实现。
+  address: 127.0.0.1
+  port: ${SERVER_PORT:8080}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

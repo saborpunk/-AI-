@@ -28,3 +28,8 @@ backups/
 .codex/
 Thumbs.db
 .DS_Store
+
+# 项目专用工具与依赖缓存
+.tools/
+.m2/
+.uv-cache/

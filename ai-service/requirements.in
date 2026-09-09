@@ -1,0 +1,7 @@
+# FastAPI：HTTP 接口；Pydantic：返回格式校验；Uvicorn：实际监听端口。
+fastapi>=0.116,<1
+pydantic>=2.11,<3
+uvicorn>=0.35,<1
+# 测试依赖；httpx 供 FastAPI TestClient 发起测试请求。
+pytest>=8.4,<10
+httpx>=0.28,<1
