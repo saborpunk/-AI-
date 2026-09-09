@@ -24,6 +24,7 @@
 - backend-java：Java 21 + Spring Boot 4.0.x；逐步加入 Validation、Security Session、MyBatis 和 Flyway。
 - ai-service：Python 3.12 + FastAPI + Pydantic + Uvicorn，Mock 阶段无外部模型调用。
 - MySQL 8.4：正式记录；在数据库阶段加入，不用内存数据库冒充持久化验收。
+- 本机数据库接入限定为现有服务 localhost:3306。保留安装目录、数据目录及服务配置；项目配置和 SQL 初始化脚本只放当前项目目录，不创建另一实例。
 - scripts：环境、启动和冒烟检查；docs：技术决策、开发记录、验证和学习资料。
 
 ## 开发顺序和验证
