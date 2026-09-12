@@ -49,4 +49,15 @@ class DatabaseUnavailableApiTest {
     }
 
     private String base() { return "http://127.0.0.1:" + port + "/api/v1/consultations"; }
+
+    @Test void traditionalModuleQueriesAlsoReturn503() throws Exception {
+        try (var client = HttpClient.newHttpClient()) {
+            for (String path : new String[]{"article-categories", "articles", "sessions"}) {
+                var response = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/v1/" + path))
+                        .timeout(Duration.ofSeconds(5)).GET().build(), HttpResponse.BodyHandlers.ofString());
+                assertThat(response.statusCode()).isEqualTo(503);
+                assertThat(response.body()).contains("DATABASE_UNAVAILABLE").doesNotContain("test disconnected");
+            }
+        }
+    }
 }

@@ -7,8 +7,8 @@ import java.util.Properties;
 /** Project-local SQL runner. Never starts/stops MySQL or handles physical data files. */
 class DatabaseSetup {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1 || !(args[0].equals("check") || args[0].equals("initialize"))) {
-            throw new IllegalArgumentException("Usage: DatabaseSetup.java check|initialize (run at project root)");
+        if (args.length != 1 || !(args[0].equals("check") || args[0].equals("initialize") || args[0].equals("initialize-v1"))) {
+            throw new IllegalArgumentException("Usage: DatabaseSetup.java check|initialize|initialize-v1 (run at project root)");
         }
         var settings = new Properties();
         try (var reader = Files.newBufferedReader(Path.of("config/db.local.properties"), StandardCharsets.UTF_8)) {
@@ -22,8 +22,9 @@ class DatabaseSetup {
         String url = "jdbc:mysql://localhost:3306/?connectTimeout=2000&socketTimeout=5000&connectionTimeZone=UTC";
         try (var connection = DriverManager.getConnection(url, user, password)) {
             System.out.println("Connected to localhost:3306, MySQL " + connection.getMetaData().getDatabaseProductVersion());
-            if (args[0].equals("initialize")) {
-                String sql = Files.readString(Path.of("scripts/sql/001_create_consultation.sql"));
+            if (!args[0].equals("check")) {
+                String script = args[0].equals("initialize-v1") ? "002_create_traditional_business.sql" : "001_create_consultation.sql";
+                String sql = Files.readString(Path.of("scripts/sql/" + script));
                 try (var statement = connection.createStatement()) {
                     for (String part : sql.split(";")) {
                         if (!part.isBlank()) { statement.execute(part); }

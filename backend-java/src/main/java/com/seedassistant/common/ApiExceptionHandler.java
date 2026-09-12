@@ -19,6 +19,16 @@ import org.springframework.web.client.RestClientException;
 public class ApiExceptionHandler {
     public record Error(String code, String message, String requestId) { }
 
+    @ExceptionHandler(BusinessException.class)
+    ResponseEntity<Error> business(BusinessException error, HttpServletRequest request) {
+        return response(error.getStatus(), error.getCode(), error.getMessage(), request);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    ResponseEntity<Error> integrity(HttpServletRequest request) {
+        return response(409, "DATA_CONFLICT", "记录存在关联或数据约束冲突，请检查后重试", request);
+    }
+
     @ExceptionHandler(ConsultationException.class)
     ResponseEntity<Error> consultation(ConsultationException error, HttpServletRequest request) {
         return response(error.status(), error.code(), error.getMessage(), request);
