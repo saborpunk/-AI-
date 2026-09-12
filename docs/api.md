@@ -2,6 +2,10 @@
 
 [项目入口](../README.md) · 基址 `http://127.0.0.1:8080/api/v1` · JSON请求 · 当前仅本机开发，无JWT认证。
 
+## V2兼容边界
+
+本版不新增用户HTTP接口。用户表、密码哈希和归属只由内部Service及测试验证；不提供匿名用户查询、创建商家或会话认领接口。原三个CRUD的URL、JSON字段、状态码和响应头不变，user_id不出现在会话响应中。公开注册、登录及用户信息接口留到V3。
+
 ## 三个CRUD模块
 
 路径前缀：`/article-categories`、`/articles`、`/sessions`。

@@ -24,13 +24,13 @@ public class ConsultationSessionService {
         // 会话是独立业务记录，创建与查询不需要模型或Python服务。
         String id=UUID.randomUUID().toString();
         return transaction.execute(tx -> {
-            mapper.insert(id,request.getTitle().strip(), request.getNotes());
+            mapper.insertRow(id,request.getTitle().strip(), request.getNotes());
             return get(id);
         });
     }
 
     public ConsultationSession get(String id) {
-        var row=mapper.find(id);
+        var row=mapper.selectById(id);
         if(row==null) throw new BusinessException(404,"SESSION_NOT_FOUND","记录不存在");
         return row;
     }
@@ -44,7 +44,7 @@ public class ConsultationSessionService {
     public ConsultationSession update(String id,ConsultationSessionUpdateRequest request) {
         get(id);
         return transaction.execute(tx -> {
-            check(mapper.update(id,request.getTitle().strip(), request.getNotes(),request.getVersion()));
+            check(mapper.updateVersioned(id,request.getTitle().strip(), request.getNotes(),request.getVersion()));
             return get(id);
         });
     }
@@ -60,7 +60,7 @@ public class ConsultationSessionService {
 
     public void delete(String id,long version) {
         get(id);
-        transaction.executeWithoutResult(tx -> check(mapper.delete(id,version)));
+        transaction.executeWithoutResult(tx -> check(mapper.deleteVersioned(id,version)));
     }
 
     private void validateStatus(String status) {

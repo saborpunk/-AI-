@@ -41,7 +41,7 @@ class TraditionalBusinessTest {
     }
 
     @Test void categoryStaleUpdateDoesNotClaimSuccess() {
-        when(categories.find("id")).thenReturn(new ArticleCategory());
+        when(categories.selectById("id")).thenReturn(new ArticleCategory());
         var request = new CategoryUpdateRequest();
         request.setName("name"); request.setDescription("text"); request.setVersion(0L);
         assertThatThrownBy(() -> categoryService.update("id", request)).isInstanceOfSatisfying(BusinessException.class,
@@ -71,7 +71,7 @@ class TraditionalBusinessTest {
     }
 
     @Test void staleSessionDeleteRollsBack() {
-        when(sessions.find("id")).thenReturn(new ConsultationSession());
+        when(sessions.selectById("id")).thenReturn(new ConsultationSession());
         assertThatThrownBy(() -> sessionService.delete("id", 1)).isInstanceOfSatisfying(BusinessException.class,
                 e -> assertThat(e.getStatus()).isEqualTo(409));
         verify(manager).rollback(any());

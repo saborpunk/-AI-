@@ -1,10 +1,20 @@
 package com.seedassistant.entity;
 
-import jakarta.validation.constraints.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+@TableName("consultation_session")
 public class ConsultationSession {
+    @TableId(type = IdType.INPUT)
     private String id;
+    // 在V3加入认证前，归属只由内部迁移操作，旧API响应结构保持不变。
+    @JsonIgnore
+    private String userId;
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     private String title;
     private String notes;
     private String status;

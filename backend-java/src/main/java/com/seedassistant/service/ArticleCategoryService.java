@@ -22,13 +22,13 @@ public class ArticleCategoryService {
     public ArticleCategory create(CategoryCreateRequest request) {
         String id=UUID.randomUUID().toString();
         return transaction.execute(tx -> {
-            mapper.insert(id,request.getName().strip(),request.getDescription());
+            mapper.insertRow(id,request.getName().strip(),request.getDescription());
             return get(id);
         });
     }
 
     public ArticleCategory get(String id) {
-        ArticleCategory row=mapper.find(id);
+        ArticleCategory row=mapper.selectById(id);
         if(row==null) throw new BusinessException(404,"CATEGORY_NOT_FOUND","分类不存在");
         return row;
     }
@@ -42,7 +42,7 @@ public class ArticleCategoryService {
     public ArticleCategory update(String id,CategoryUpdateRequest request) {
         get(id);
         return transaction.execute(tx -> {
-            check(mapper.update(id,request.getName().strip(),request.getDescription(),request.getVersion()));
+            check(mapper.updateVersioned(id,request.getName().strip(),request.getDescription(),request.getVersion()));
             return get(id);
         });
     }
@@ -58,7 +58,7 @@ public class ArticleCategoryService {
 
     public void delete(String id,long version) {
         get(id);
-        transaction.executeWithoutResult(tx -> check(mapper.delete(id,version)));
+        transaction.executeWithoutResult(tx -> check(mapper.deleteVersioned(id,version)));
     }
 
     private void validateStatus(String status) {

@@ -26,13 +26,13 @@ public class KnowledgeArticleService {
         String id=UUID.randomUUID().toString();
         return transaction.execute(tx -> {
             checkCategory(request.getCategoryId());
-            mapper.insert(id,request.getTitle().strip(), request.getContent(), request.getCategoryId());
+            mapper.insertRow(id,request.getTitle().strip(), request.getContent(), request.getCategoryId());
             return get(id);
         });
     }
 
     public KnowledgeArticle get(String id) {
-        var row=mapper.find(id);
+        var row=mapper.selectById(id);
         if(row==null) throw new BusinessException(404,"ARTICLE_NOT_FOUND","记录不存在");
         return row;
     }
@@ -47,7 +47,7 @@ public class KnowledgeArticleService {
         get(id);
         return transaction.execute(tx -> {
             checkCategory(request.getCategoryId());
-            check(mapper.update(id,request.getTitle().strip(), request.getContent(), request.getCategoryId(),request.getVersion()));
+            check(mapper.updateVersioned(id,request.getTitle().strip(), request.getContent(), request.getCategoryId(),request.getVersion()));
             return get(id);
         });
     }
@@ -63,7 +63,7 @@ public class KnowledgeArticleService {
 
     public void delete(String id,long version) {
         get(id);
-        transaction.executeWithoutResult(tx -> check(mapper.delete(id,version)));
+        transaction.executeWithoutResult(tx -> check(mapper.deleteVersioned(id,version)));
     }
 
     private void validateStatus(String status) {
@@ -76,7 +76,7 @@ public class KnowledgeArticleService {
 
     private void checkCategory(String id) {
         // 先给出清楚的404；并发删除分类时，最终仍由数据库外键保护引用。
-        if(categories.find(id)==null) throw new BusinessException(404,"CATEGORY_NOT_FOUND","分类不存在");
+        if(categories.selectById(id)==null) throw new BusinessException(404,"CATEGORY_NOT_FOUND","分类不存在");
     }
 
 }

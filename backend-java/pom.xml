@@ -16,11 +16,16 @@
         <java.version>21</java.version>
     </properties>
     <dependencies>
+        <!-- 仅使用密码哈希工具，不启用Web认证；JWT与过滤器留到V3。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
         <!-- 显式 SQL 映射与 MySQL 连接；本阶段通过项目内 SQL 脚本建表。 -->
         <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>4.0.0</version>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+            <version>3.5.17</version>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>

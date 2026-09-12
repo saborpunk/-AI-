@@ -1,26 +1,32 @@
 package com.seedassistant.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
-@TableName("article_category")
-public class ArticleCategory {
+@TableName("user_account")
+public class UserAccount {
     @TableId(type = IdType.INPUT)
     private String id;
-    private String name;
-    private String description;
+    private String username;
+    @JsonIgnore
+    private String passwordHash;
+    private String displayName;
+    private String role;
     private String status;
     private long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public long getVersion() { return version; }
