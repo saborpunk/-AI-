@@ -9,6 +9,7 @@ JDK21、MySQL8.4（现有localhost:3306）、Git；前端需Node，本机为24.2
 以下命令在项目根目录执行，已有配置不要覆盖：
 
 ```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Desktop\智能化升级'
 Set-ExecutionPolicy -Scope Process Bypass
 . .\scripts\use-local-tools.ps1 -JdkHome 'D:\dev\sdk'
 if (-not (Test-Path config/db.local.properties)) {
@@ -34,8 +35,24 @@ V2升级到V3没有新DDL，仅需生成JWT密钥、下载新增Security/JOSE依
 
 ## 启动与商家设置
 
-终端一：`java -jar .\backend-java\target\seed-service-0.1.0-SNAPSHOT.jar`。
-终端二：`node frontend/server.mjs`。前端日常启动无需npm install。
+每个新终端都有自己的当前目录，不会自动继承首次配置终端的位置。以下路径对应本机；换电脑或移动项目后，替换项目路径和JDK路径。
+
+终端一，完整复制执行：
+
+```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Desktop\智能化升级'
+$env:DEBUG = 'false'
+& 'D:\dev\sdk\bin\java.exe' -jar .\backend-java\target\seed-service-0.1.0-SNAPSHOT.jar
+```
+
+终端二，完整复制执行：
+
+```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Desktop\智能化升级'
+node .\frontend\server.mjs
+```
+
+两个终端都保持运行，不关闭；停止对应服务用Ctrl+C。前端日常启动无需npm install。不要只改为绝对jar路径而仍留在用户目录：后端也需要从项目目录读取本地数据库与JWT配置。
 
 浏览器打开 http://127.0.0.1:5173 ，注册客户账号后登录。后端健康检查为 http://127.0.0.1:8080/actuator/health 。两者仅监听回环地址。
 
@@ -116,6 +133,7 @@ V2提交8737a00保留旧版本。V3修正原健康测试：未登录访问未开
 
 | 现象 | 处理 |
 | --- | --- |
+| Unable to access jarfile / Cannot find module | 两个终端分别先执行上面的Set-Location；`Get-Location`应为项目目录。若目录正确但jar缺失，重新构建并确认BUILD SUCCESS |
 | JWT key启动失败 | 运行initialize-auth.ps1；不要将随机密钥写入源码 |
 | Maven403/首次缺依赖 | 使用项目mirror配置；首次不加-o |
 | jar无法重命名 | 停止本项目Java再构建，不结束其他进程 |

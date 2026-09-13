@@ -27,6 +27,7 @@ Java21 / Spring Boot4.0.8 / Spring Security / JWT / MyBatis-Plus3.5.17 / MySQL8.
 首次环境、数据库初始化及V2升级见[启动说明](docs/development.md)。本地数据库配置不提交。
 
 ```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Desktop\智能化升级'
 Set-ExecutionPolicy -Scope Process Bypass
 . .\scripts\use-local-tools.ps1 -JdkHome 'D:\dev\sdk'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/initialize-auth.ps1
@@ -34,7 +35,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/initialize-auth.
 java -jar .\backend-java\target\seed-service-0.1.0-SNAPSHOT.jar
 ```
 
-新终端在项目根目录运行 `node frontend/server.mjs`，打开 http://127.0.0.1:5173 。首次下载Java依赖去掉-o；前端日常启动无需npm install。
+新终端不会继承项目目录，终端二完整执行：
+
+```powershell
+Set-Location -LiteralPath 'C:\Users\PC\Desktop\智能化升级'
+node .\frontend\server.mjs
+```
+
+打开 http://127.0.0.1:5173 。上面的路径对应本机，其他位置请替换；两个终端保持运行。首次下载Java依赖去掉-o；前端日常启动无需npm install。已完成首次配置时，两个终端的最短命令见[启动说明](docs/development.md#启动与商家设置)。
 
 注册客户账号 → 登录 → 创建咨询 → 查看并修改记录。JWT有效期15分钟，页面刷新后重新登录。商家设置方式见启动说明。
 
