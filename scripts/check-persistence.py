@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,7 +16,10 @@ def run():
     parser.add_argument('mode', choices=['flow', 'readback', 'database-unavailable', 'python-unavailable'])
     parser.add_argument('--base-url', default='http://127.0.0.1:8080')
     args = parser.parse_args()
-    with httpx.Client(base_url=args.base_url, timeout=12, trust_env=False) as client:
+    token = os.environ.get('SEED_TEST_TOKEN')
+    if not token:
+        raise SystemExit('Set SEED_TEST_TOKEN to a merchant JWT first.')
+    with httpx.Client(base_url=args.base_url, timeout=12, trust_env=False, headers={'Authorization': 'Bearer ' + token}) as client:
         def call(method, path, expected, payload=None):
             response = client.request(method, '/api/v1/consultations' + path, json=payload)
             assert response.status_code == expected, f'{method} {path}: {response.status_code}, expected {expected}'

@@ -1,0 +1,9 @@
+{
+  "name": "seed-assistant-frontend",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
+  "scripts": { "start": "node server.mjs", "test": "node --test" },
+  "devDependencies": { "jsdom": "30.0.1" }
+}

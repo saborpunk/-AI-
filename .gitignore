@@ -34,3 +34,4 @@ Thumbs.db
 .m2/
 .uv-cache/
 config/db.local.properties
+config/auth.local.properties

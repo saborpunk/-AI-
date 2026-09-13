@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.*;
 /** Opt-in: connects only to the configured existing MySQL. No embedded replacement database. */
 @SpringBootTest
 @EnabledIfEnvironmentVariable(named = "RUN_MYSQL_TESTS", matches = "true")
-class UserPersistenceTest {
+class UserPersistenceTest extends JwtTestSupport {
     @Autowired UserAccountService users;
     @Autowired UserAccountMapper mapper;
     @Autowired ConsultationSessionService sessions;

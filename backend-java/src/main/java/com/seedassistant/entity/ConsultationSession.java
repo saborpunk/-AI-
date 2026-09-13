@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class ConsultationSession {
     @TableId(type = IdType.INPUT)
     private String id;
-    // 在V3加入认证前，归属只由内部迁移操作，旧API响应结构保持不变。
+    // 归属由认证上下文设置；隐藏内部字段以保持原API响应结构。
     @JsonIgnore
     private String userId;
     public String getUserId() { return userId; }

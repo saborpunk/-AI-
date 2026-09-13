@@ -20,13 +20,15 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class DraftApiTest {
+class DraftApiTest extends JwtTestSupport {
     static final JsonMapper JSON = JsonMapper.builder().build();
     static final AtomicInteger CALLS = new AtomicInteger();
     static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     static HttpServer python;
     static volatile String mode = "ok";
     @LocalServerPort int port;
+    @org.springframework.beans.factory.annotation.Autowired com.seedassistant.security.JwtService tokens;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean com.seedassistant.mapper.UserAccountMapper users;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) throws Exception {
@@ -59,7 +61,7 @@ class DraftApiTest {
         registry.add("ai.read-timeout", () -> "1s");
     }
 
-    @BeforeEach void reset() { mode = "ok"; CALLS.set(0); }
+    @BeforeEach void reset() { org.mockito.Mockito.when(users.selectById(USER_ID)).thenReturn(merchant()); mode = "ok"; CALLS.set(0); }
     @AfterAll static void stop() { python.stop(0); EXECUTOR.shutdownNow(); }
 
     @Test void requestPassesThroughJavaAndReturnsValidatedPythonResult() throws Exception {
@@ -110,7 +112,7 @@ class DraftApiTest {
     private HttpResponse<String> post(String body) throws Exception {
         try (var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()) {
             return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/v1/germination-drafts"))
-                    .timeout(Duration.ofSeconds(6)).header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + tokens.issue(USER_ID)).timeout(Duration.ofSeconds(6)).header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)).build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         }

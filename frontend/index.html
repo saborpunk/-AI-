@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>种子咨询 · 业务后台</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header><div><span class="brand">种子咨询</span><span class="badge">业务后台</span></div><button id="logout" class="secondary" hidden>退出登录</button></header>
+  <main>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section id="auth" class="auth-layout">
+      <div class="intro"><p class="eyebrow">让每一次咨询都有记录</p><h1>从种下问题，<br>到找到答案。</h1><p>记录咨询内容，查看历史进展。客户管理自己的会话，商家协助处理咨询。</p></div>
+      <div class="card">
+        <h2 id="auth-title">登录账号</h2><p class="muted" id="auth-hint">登录后继续管理你的咨询。</p>
+        <form id="auth-form">
+          <label>用户名<input name="username" autocomplete="username" maxlength="32" required placeholder="字母、数字或下划线"></label>
+          <label>密码<input name="password" type="password" autocomplete="current-password" maxlength="72" required></label>
+          <label id="display-field" hidden>昵称<input name="displayName" maxlength="80" autocomplete="nickname"></label>
+          <button type="submit" id="auth-submit">登录</button>
+        </form>
+        <button id="switch-auth" class="text-button">没有账号？注册客户账号</button>
+      </div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="section-heading"><div><p class="eyebrow" id="role-label"></p><h1 id="greeting"></h1></div><p class="muted">把问题记下来，让沟通更清楚。</p></div>
+      <div class="workspace-grid">
+        <section class="card"><h2>新建咨询</h2><form id="create-form"><label>咨询标题<input name="title" required maxlength="200" placeholder="这次想咨询什么？"></label><label>备注<textarea name="notes" rows="4" maxlength="2000" placeholder="补充问题背景或处理记录"></textarea></label><button type="submit">创建咨询</button></form></section>
+        <section class="card"><div class="row"><h2 id="list-title">我的咨询</h2><button id="refresh" class="secondary">刷新</button></div><ul id="session-list" class="session-list"></ul><button id="more" class="secondary" hidden>加载更多</button></section>
+      </div>
+      <section id="editor" class="card" hidden><div class="row"><h2>咨询详情</h2><button id="close-editor" class="text-button">收起</button></div><p id="session-meta" class="muted"></p><form id="edit-form"><label>标题<input name="title" required maxlength="200"></label><label>备注<textarea name="notes" rows="4" maxlength="2000"></textarea></label><div class="actions"><button type="submit">保存修改</button><button type="button" id="toggle-status" class="secondary">结束咨询</button><button type="button" id="delete-session" class="danger">删除咨询</button></div></form></section>
+      <section id="merchant" class="card" hidden><div class="row"><h2>知识文章</h2><button id="load-articles" class="secondary">查看文章</button></div><ul id="article-list" class="session-list"></ul></section>
+    </section>
+  </main>
+  <footer>种子咨询 · 记录问题，持续沟通</footer>
+</body>
+</html>

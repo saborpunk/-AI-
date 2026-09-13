@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** V2内部数据服务。尚无公开注册接口，V3在此基础上加入认证。 */
+/** 用户数据服务：注册固定创建客户，响应对象不包含密码哈希。 */
 @Service
 public class UserAccountService {
     private final UserAccountMapper mapper;

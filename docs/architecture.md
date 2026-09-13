@@ -2,61 +2,52 @@
 
 [项目入口](../README.md)
 
-## 当前：传统业务先行
-
 ```mermaid
 flowchart LR
-    C["API调用方（前端待实现）"] --> W["Spring MVC / Controller"]
-    W --> S["Service：业务校验与事务"]
-    S --> M["MyBatis-Plus Mapper：基础读取与显式SQL"]
-    M --> D[("MySQL：分类、文章、会话、用户")]
+    F[前端5173] -->|HTTP/JSON| R[RequestIdFilter]
+    R --> J[JWT验签/账号状态/角色]
+    J --> C[Controller与DTO校验]
+    C --> S[Service业务与归属校验]
+    S --> M[MyBatis-Plus Mapper]
+    M --> D[(现有MySQL3306)]
+    J -->|每次读取角色和禁用状态| D
 ```
 
-三个新模块独立走三层架构，没有AI依赖；实体使用普通Java类，输入使用独立DTO。无无意义Service接口、通用CRUD基类或额外组件。当前直接返回不含敏感字段的实体；用户内部服务使用UserResponse排除密码，UserAccount另加JsonIgnore防止误序列化哈希。
+## 认证边界
 
-旧consultation/draft包、Python代码和原咨询表保留兼容。旧生成接口需要Python，新传统业务不需要；后续AI阶段再迁移旧实现，当前不把它作为底座。
+注册固定创建CUSTOMER，用户名规范化、唯一约束与BCrypt沿用V2。AuthService验证哈希后由JwtService签发15分钟JWT。登录失败统一提示，不区分不存在、错密码或禁用账号；不存在的用户名也执行一次哈希比较。
 
-## 模块与规则
+JWT使用Spring Security提供的Nimbus编码器/解码器，固定HS256，验证签名、issuer、audience、subject、issuedAt和expiresAt。不自己实现加密算法。至少32字节随机密钥仅保存在项目config/auth.local.properties，缺失或过短时拒绝启动；更换密钥会使旧令牌不可用。
 
-| 模块 | Controller / Service / Mapper前缀 | 规则 |
-| --- | --- | --- |
-| 文章分类 | ArticleCategory | ENABLED / DISABLED；被文章引用时禁止删除 |
-| 知识文章 | KnowledgeArticle | DRAFT / PUBLISHED；分类必须存在 |
-| 咨询会话 | ConsultationSession | OPEN / CLOSED；当前只管理标题和备注，不生成消息 |
+JwtAuthenticationFilter只从Authorization读取Bearer令牌。每次查询MySQL里的当前角色和状态，不信任前端角色，不在JWT内保存密码或角色；禁用期间拒绝旧Token，重新启用后未到期Token仍可用。数据库故障返回503，不伪装成密码错误。
 
-分类状态当前是管理标记，不联动文章发布；会话CLOSED仍可修改元数据或重新设OPEN。V2有用户表和可空会话user_id，但仍无鉴权，只有合成演示数据；V3/V4完成认证和归属访问控制后，才能进行多用户试用。
+SecurityFilterChain采用STATELESS，不创建登录Session，不启用表单登录或Basic认证。没有Cookie认证，前端也不发送Cookie，因此关闭CSRF表单保护。CORS仅允许localhost/127.0.0.1:5173；CORS不代替权限检查。RequestIdFilter先于认证执行，401/403也有请求编号和JSON错误。
 
-## 持久化与接口边界
+前端Token只存内存，刷新或退出清除；本版没有刷新令牌或服务端退出撤销。退出页面后，被复制的Token在到期/禁用账号前仍有效。当前短期令牌配合本机演示足够，公开部署前再评估HTTPS、登录防滥用和撤销机制。
 
-新增表及外键见[schema](schema.md)。新接口见[api](api.md)。旧表和接口字段保持原约定，不删除旧数据；仅为新会话表增加可空user_id，旧响应不增加字段。
+## 业务与持久层
 
-创建/更新及读回在TransactionTemplate短事务内。写入携带version，SQL以id/version条件更新，成功加1；影响0行返回409，避免旧请求覆盖。删除同样携带version。分类的删除保护最终由MySQL外键保证，避免先查后删的竞态。
+- 分类与文章管理、旧consultations/预览仅商家可用；目前按同一商家组织的工作人员理解MERCHANT，不是多租户平台。
+- 会话Controller调用SessionAccessService统一检查归属，再复用ConsultationSessionService的CRUD规则。客户只能访问自己的会话；访问别人或未归属记录统一404。商家可访问所有记录。
+- 会话创建时直接写登录用户ID；分页SQL包含user_id条件。DTO不接收可信归属信息。既有内部SessionOwnershipService只允许NULL归属分配一次，不开放HTTP入口，也不批量认领历史记录。
+- 基础读取用BaseMapper.selectById；写入、分页和带版本条件的更新保留显式SQL。自定义写方法命名insertRow/updateVersioned/deleteVersioned，避免和框架方法冲突。
+- 创建/写入/读回使用TransactionTemplate短事务。BCrypt编码在事务外。WHERE id/version与影响行数检测实现乐观锁，不叠加插件。所有用户输入用参数绑定。
+- 分类外键与用户外键均RESTRICT，不级联删除。历史NULL归属保持原样。数据模型见[schema](schema.md)，字段和接口见[api](api.md)。
 
-分页默认20、最多100，页码1–1000，按created_at/id倒序；多查一条生成hasMore。keyword通过LOCATE绑定参数进行字面子串查询，未做全文索引或大数据优化。新表DATETIME按UTC存储，接口无偏移时间字符串也按UTC解释。
+分类ENABLED/DISABLED、文章DRAFT/PUBLISHED、会话OPEN/CLOSED均保留。会话结束后仍可改元数据或重开；分类状态暂不联动文章发布。分页多取一条生成hasMore，时间按UTC存取，无全文检索和缓存。
 
-400输入错误，404记录不存在，409版本或外键约束冲突，503数据库连接不可用，500其他数据库错误。requestId用于定位请求，不是业务主键或幂等键。提交响应中断时需重新查记录确认结果。
+旧Java↔Python草稿代码继续兼容，只有旧生成接口依赖Python。普通用户、文章、会话流程均独立于AI。
 
-## V2用户与持久层边界
-
-- 使用[MyBatis-Plus Boot4 Starter](https://baomidou.com/en/getting-started/install/)替换原Starter，不叠加两套自动配置。三个传统Mapper继承BaseMapper，Service真实调用selectById。自定义写方法另起名称，避免覆盖框架SQL。
-- 不启用乐观锁或分页插件：既有SQL已经处理版本和分页，叠加插件会使行为难以解释。
-- UserAccountService.createCustomer → BCrypt → 短事务 → UserAccountMapper.insertCustomer → MySQL → UserResponse。用户名去首尾空格、转小写，唯一索引防并发重复。没有默认账号。
-- [Spring Security Crypto](https://docs.spring.io/spring-security/reference/features/integrations/cryptography.html)只提供密码工具，不开启安全过滤器。BCrypt强度12，编码在事务外，避免耗时计算占用数据库连接。
-- 历史会话user_id为NULL。SessionOwnershipService仅是内部迁移方法，核实归属后才能调用；WHERE id/version/user_id IS NULL防止覆盖已有归属。数据库外键阻止不存在用户和删除被引用用户。
-- 当前不批量认领旧会话、不开放归属API。V3应从认证上下文获得当前用户，历史未归属记录不能自动向任意客户开放；账号禁用和授权留到V3/V4。
-
-## 后续阶段及完成门槛
+## 阶段路线
 
 | 版本 | 内容 | 验收门槛 |
 | --- | --- | --- |
-| V1（已完成） | 三个传统CRUD，MyBatis + 真实MySQL | 正常/异常CRUD、条件分页、关联保护、重启读回；无需AI服务 |
-| V2（本次完成） | 持久层整理/MyBatis-Plus、用户表及归属迁移 | Entity→Mapper→SQL→Table映射、旧数据兼容；密码仅哈希保存 |
-| V3（待确认） | 注册登录、JWT/Spring Security、客户/商家、前端基础 | Bearer认证、有效期、禁用账号、401/403、前后端实际调用 |
-| V4（待确认） | 完整传统业务工作台、用户信息与状态、业务归属校验 | 无AI时完成用户与业务全流程；角色越权和数据越权测试 |
-| V5（待确认） | Spring AI、外部兼容模型 | 无密钥Mock可运行；真实模型配置、费用预算、异常与超时验证 |
-| V6（待确认） | 会话消息、多轮上下文、结束后的对话评估 | 先存用户消息、再生成并存AI消息；失败可追溯，评估不混同事实正确率 |
-| V7（待确认） | SSE流式对话 | 浏览器增量显示、取消/断连处理、最终消息落库、不重复保存 |
+| V1已完成 | 三个CRUD、MyBatis/MySQL | 正常/异常CRUD、并发修改、关联保护 |
+| V2已完成 | MyBatis-Plus、用户表、可空归属 | 哈希存储、唯一约束、旧记录兼容 |
+| V3本次 | 注册登录、JWT、客户/商家、独立前端 | 认证/禁用/401/403、客户数据隔离、实际前后端调用 |
+| V4待确认 | 完整业务工作台、用户信息与状态管理、知识文章浏览 | 无AI完成传统业务全流程，补全角色与数据权限场景 |
+| V5待确认 | Spring AI及外部模型 | Mock与真实模型配置、超时和失败验证 |
+| V6待确认 | 会话消息、多轮上下文、对话结束评估 | 用户/AI消息落库、失败可追溯 |
+| V7待确认 | SSE流式输出 | 增量展示、取消/断连、最终消息落库 |
 
-V1已使用真实MySQL，不为版本命名退回内存存储。V2进一步整理映射，不重复声称首次引入数据库。角色按用户最后明确的客户/商家两种，不同时引入另一套普通用户/管理员体系。
-
-传统后端稳定后才做AI；最终业务Service可调用AI扩展，但创建/查询/人工处理不能依赖模型可用。SSE是HTTP响应流，不是MQ。V7完成后若有实际性能问题，再提醒评估Redis、MQ、限流等；当前不预埋这些组件。
+传统业务稳定后再扩展AI。SSE是HTTP响应流，不是MQ。V7完成且出现实际性能需求时再评估Redis、MQ、限流等，当前不预埋。

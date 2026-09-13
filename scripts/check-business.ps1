@@ -8,6 +8,8 @@ $handler = New-Object System.Net.Http.HttpClientHandler
 $handler.UseProxy = $false
 $client = New-Object System.Net.Http.HttpClient($handler)
 $client.Timeout = [TimeSpan]::FromSeconds(15)
+if (-not $env:SEED_TEST_TOKEN) { throw 'Set SEED_TEST_TOKEN to a merchant JWT before running business acceptance.' }
+$client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:SEED_TEST_TOKEN)
 $statePath = Join-Path (Split-Path $PSScriptRoot -Parent) '.tools/business-check.json'
 function Check($condition, [string]$message) { if (-not $condition) { throw $message } }
 function Call([string]$method, [string]$path, [int]$expected, $body = $null) {

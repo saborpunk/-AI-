@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "management.health.db.enabled=false")
-class HealthEndpointTest {
+class HealthEndpointTest extends JwtTestSupport {
     @LocalServerPort
     private int port;
 
@@ -24,7 +24,7 @@ class HealthEndpointTest {
             assertThat(health.statusCode()).isEqualTo(200);
             assertThat(health.body()).contains("\"status\":\"UP\"").doesNotContain("components");
             var env = client.send(request("/actuator/env"), HttpResponse.BodyHandlers.ofString());
-            assertThat(env.statusCode()).isEqualTo(404);
+            assertThat(env.statusCode()).isEqualTo(401);
         }
     }
 

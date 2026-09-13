@@ -1,10 +1,29 @@
 # API说明
 
-[项目入口](../README.md) · 基址 `http://127.0.0.1:8080/api/v1` · JSON请求 · 当前仅本机开发，无JWT认证。
+[项目入口](../README.md) · 基址 `http://127.0.0.1:8080/api/v1` · JSON请求 · 当前本机开发；除注册、登录和GET /actuator/health外均需JWT。
 
-## V2兼容边界
+## 认证与权限
 
-本版不新增用户HTTP接口。用户表、密码哈希和归属只由内部Service及测试验证；不提供匿名用户查询、创建商家或会话认领接口。原三个CRUD的URL、JSON字段、状态码和响应头不变，user_id不出现在会话响应中。公开注册、登录及用户信息接口留到V3。
+| 方法/路径 | 输入 | 返回 |
+| --- | --- | --- |
+| POST /auth/register | username、password、displayName | 201，用户信息；固定CUSTOMER，无密码字段，Location=/api/v1/users/me |
+| POST /auth/login | username、password | 200，accessToken、tokenType=Bearer、expiresIn=900（秒） |
+| GET /users/me | Authorization头 | 200，id/username/displayName/role/status/version/createdAt |
+
+注册用户名去首尾空格转小写，3—32位字母数字下划线；密码12—72个Java字符且UTF-8不超过72字节，昵称非空且最多80字符。注册不允许选择商家角色。重复用户名409/USERNAME_EXISTS，校验失败400；登录失败401/BAD_CREDENTIALS。
+
+后续请求头：`Authorization: Bearer <登录返回的accessToken>`。不在URL、Cookie或日志传令牌。不支持自动刷新；Token过期后重新登录。前端退出仅清理页面凭证，不撤销已复制的Token。
+
+| 资源 | 客户 | 商家 |
+| --- | --- | --- |
+| /users/me | 当前本人 | 当前本人 |
+| /sessions及子路径 | 仅本人会话 | 全部会话，含历史未归属 |
+| /articles、/article-categories | 403 | 全部CRUD |
+| /consultations、/germination-drafts旧接口 | 403 | 兼容原业务 |
+
+没有/无效/过期Token或账号被禁用：401/UNAUTHORIZED；角色不足：403/FORBIDDEN；客户访问别人的或未归属会话：404/SESSION_NOT_FOUND。前端不能提交userId认领会话，创建时由认证上下文决定。账号禁用期间旧Token也拒绝；认证数据库故障503/DATABASE_UNAVAILABLE。
+
+V3保留原CRUD的URL、JSON字段、Location和业务状态码，新增认证前置要求。会话响应不暴露内部user_id。所有响应有X-Request-Id；认证错误同样使用下方错误结构。
 
 ## 三个CRUD模块
 
@@ -68,8 +87,8 @@ PUT提交同样的完整业务字段，另外增加最新version；不通过PUT�
 | 503 | DATABASE_UNAVAILABLE | 数据库连接异常 |
 | 500 | DATABASE_ERROR | 其他数据库操作失败 |
 
-无身份认证和归属隔离，不用于公网或真实多用户场景。JWT与客户/商家权限在V3验收。
+完整用户信息修改、用户状态管理页面和客户知识文章浏览留到V4。当前仅监听127.0.0.1。
 
 ## 旧接口兼容
 
-原/api/v1/consultations的创建、详情、历史、/draft生成、/review人工确认，以及/api/v1/germination-drafts预览保留原JSON。旧生成需Python且可返回502/503/504，当前三个传统模块无需Python。新会话CRUD不隐式调用旧草稿接口。
+原/api/v1/consultations的创建、详情、历史、/draft生成、/review人工确认，以及/api/v1/germination-drafts预览保留原JSON。旧接口须商家Bearer Token；旧生成需Python且可返回502/503/504，当前三个传统模块无需Python。新会话CRUD不隐式调用旧草稿接口。

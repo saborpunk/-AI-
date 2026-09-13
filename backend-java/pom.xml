@@ -16,7 +16,15 @@
         <java.version>21</java.version>
     </properties>
     <dependencies>
-        <!-- 仅使用密码哈希工具，不启用Web认证；JWT与过滤器留到V3。 -->
+        <!-- Security保护接口，JOSE使用成熟实现签发和校验JWT，不手写密码学。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>

@@ -5,7 +5,7 @@ ai:
   read-timeout: 3s
 spring:
   config:
-    import: optional:file:./config/db.local.properties,optional:file:../config/db.local.properties
+    import: optional:file:./config/db.local.properties,optional:file:../config/db.local.properties,optional:file:./config/auth.local.properties,optional:file:../config/auth.local.properties
   application:
     name: seed-service
   datasource:
@@ -23,7 +23,7 @@ mybatis-plus:
     arg-name-based-constructor-auto-mapping: true
     default-statement-timeout: 3
 server:
-  # 骨架只供本机验证；业务鉴权尚未实现。
+  # 本地演示监听回环地址，公开部署须另行配置HTTPS。
   address: 127.0.0.1
   port: ${SERVER_PORT:8080}
 management:
